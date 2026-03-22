@@ -28,7 +28,7 @@ jobs:
 
       - name: Vérification imports
         run: |
-          pip install flask flask-sqlalchemy flask-login flask-wtf flask-socketio eventlet
+          pip install flask flask-sqlalchemy flask-migrate flask-login flask-wtf flask-socketio eventlet
           python -c "
           import os
           os.environ['DATABASE_URL'] = 'sqlite:///test.db'
