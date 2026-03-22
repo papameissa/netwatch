@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>NetWatch — Connexion</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{--navy:#070b14;--surface:#131d2e;--surface2:#1a2540;--cyan:#00d4ff;
+      --red:#ef4444;--text:#f1f5f9;--text2:#94a3b8;--text3:#475569;--border:#1e3a5f}
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:var(--navy);color:var(--text);font-family:'Outfit',sans-serif;
+      min-height:100vh;display:flex;align-items:center;justify-content:center}
+    body::before{content:'';position:fixed;inset:0;
+      background-image:linear-gradient(var(--border) 1px,transparent 1px),
+        linear-gradient(90deg,var(--border) 1px,transparent 1px);
+      background-size:40px 40px;opacity:0.15;pointer-events:none}
+    .box{background:var(--surface);border:1px solid var(--border);border-radius:16px;
+      padding:40px;width:380px;position:relative;z-index:1}
+    .logo{width:52px;height:52px;background:linear-gradient(135deg,var(--cyan),#0088aa);
+      border-radius:14px;display:flex;align-items:center;justify-content:center;
+      margin:0 auto 20px;box-shadow:0 0 30px rgba(0,212,255,0.25)}
+    .logo svg{width:26px;height:26px;color:#fff}
+    h1{text-align:center;font-size:22px;font-weight:700;margin-bottom:4px}
+    .sub{text-align:center;color:var(--text3);font-size:13px;margin-bottom:28px}
+    label{display:block;font-size:11px;font-weight:700;color:var(--text2);
+      text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px}
+    input{width:100%;background:var(--surface2);border:1px solid var(--border);
+      border-radius:8px;padding:11px 14px;color:var(--text);font-family:'Outfit',sans-serif;
+      font-size:14px;outline:none;transition:border-color 0.2s,box-shadow 0.2s;margin-bottom:14px}
+    input:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,212,255,0.1)}
+    .error{background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:var(--red);
+      padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:16px}
+    button{width:100%;background:linear-gradient(135deg,var(--cyan),#0099bb);color:#070b14;
+      border:none;padding:13px;border-radius:8px;font-family:'Outfit',sans-serif;font-size:15px;
+      font-weight:700;cursor:pointer;transition:all 0.2s;margin-top:4px}
+    button:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,212,255,0.3)}
+    .creds{background:var(--surface2);border:1px solid var(--border);border-radius:8px;
+      padding:10px 14px;font-size:12px;color:var(--text3);text-align:center;margin-top:16px;
+      font-family:'DM Mono',monospace}
+  </style>
+</head>
+<body>
+<div class="box">
+  <div class="logo">
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18"/>
+    </svg>
+  </div>
+  <h1>NetWatch</h1>
+  <p class="sub">Surveillance réseau — Connexion</p>
+
+  {% with messages = get_flashed_messages() %}
+    {% if messages %}
+      <div class="error">{{ messages[0] }}</div>
+    {% endif %}
+  {% endwith %}
+
+  <form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+    <label>Nom d'utilisateur</label>
+    <input type="text" name="username" required autofocus>
+    <label>Mot de passe</label>
+    <input type="password" name="password" required>
+    <button type="submit">Se connecter →</button>
+  </form>
+  <div class="creds">admin / Admin@2024!</div>
+</div>
+</body>
+</html>

@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Ajouter équipement{% endblock %}
+{% block page_title %}Équipements{% endblock %}
+{% block content %}
+<div style="max-width:580px">
+  <div style="margin-bottom:20px">
+    <a href="/reseau" class="btn btn-ghost btn-sm">← Retour</a>
+  </div>
+  <div style="margin-bottom:20px">
+    <div class="page-heading">Nouvel équipement</div>
+    <div class="page-desc">Enregistrer un appareil à surveiller</div>
+  </div>
+  <div class="card">
+    <div class="card-body">
+      <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Nom <span>*</span></label>
+            <input class="form-control" type="text" name="nom" placeholder="Ex: Serveur Web" required autofocus>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Adresse IP <span>*</span></label>
+            <input class="form-control" type="text" name="ip_address" placeholder="Ex: 192.168.1.1" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Type</label>
+          <select class="form-control" name="type_equipement">
+            {% for t in types %}
+            <option>{{ t }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Ports à surveiller</label>
+            <input class="form-control" type="text" name="ports_surveilles" placeholder="80,443,22">
+            <div class="form-hint">Séparés par des virgules</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Intervalle (secondes)</label>
+            <input class="form-control" type="number" name="intervalle" value="30" min="10" max="300">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <input class="form-control" type="text" name="description" placeholder="Optionnel">
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Enregistrer</button>
+          <a href="/reseau" class="btn btn-ghost">Annuler</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

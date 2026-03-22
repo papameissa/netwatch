@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Accès refusé{% endblock %}
+{% block page_title %}Erreur{% endblock %}
+{% block content %}
+<div style="text-align:center;padding:80px 24px">
+  <div style="font-size:72px;font-weight:700;color:var(--red);font-family:var(--mono);margin-bottom:8px">403</div>
+  <div style="font-size:20px;font-weight:700;margin-bottom:8px">Accès refusé</div>
+  <div style="color:var(--text3);margin-bottom:24px">Vous n'avez pas les droits nécessaires.</div>
+  <a href="/" class="btn btn-primary">← Retour</a>
+</div>
+{% endblock %}

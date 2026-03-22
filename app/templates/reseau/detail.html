@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}{{ eq.nom }} — Historique{% endblock %}
+{% block page_title %}Détail équipement{% endblock %}
+{% block content %}
+<div style="margin-bottom:16px">
+  <a href="/reseau" class="btn btn-ghost btn-sm">← Retour</a>
+</div>
+
+<div class="grid-2" style="margin-bottom:20px;align-items:start">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">{{ eq.nom }}</div>
+      {% if eq.dernier_statut == 'up' %}<span class="badge badge-green">UP</span>
+      {% elif eq.dernier_statut == 'down' %}<span class="badge badge-red">DOWN</span>
+      {% else %}<span class="badge badge-muted">Inconnu</span>{% endif %}
+    </div>
+    <div class="card-body">
+      <div class="grid-2">
+        {% for label, val, color in [
+          ('Adresse IP', eq.ip_address, 'var(--cyan)'),
+          ('Type', eq.type_equipement, 'var(--text)'),
+          ('Latence', (eq.derniere_latence|string + ' ms') if eq.derniere_latence else '—', 'var(--green)' if eq.derniere_latence and eq.derniere_latence < 50 else 'var(--amber)'),
+          ('Uptime', (eq.uptime_pct|string + '%') if eq.uptime_pct is not none else '—', 'var(--green)' if eq.uptime_pct and eq.uptime_pct >= 95 else 'var(--amber)'),
+          ('Intervalle', eq.intervalle|string + 's', 'var(--text2)'),
+          ('Ports', eq.ports_surveilles if eq.ports_surveilles else '—', 'var(--text2)'),
+        ] %}
+        <div style="background:var(--surface2);border-radius:8px;padding:12px">
+          <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">{{ label }}</div>
+          <div style="font-family:var(--mono);font-size:13px;color:{{ color }}">{{ val }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><div class="card-title">Courbe de latence</div></div>
+    <div class="card-body">
+      <canvas id="chart" height="130"></canvas>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title">Journal ({{ historique|length }} entrées)</div>
+  </div>
+  <div class="table-wrap" style="max-height:400px;overflow-y:auto">
+    <table>
+      <thead><tr><th>Heure</th><th>Statut</th><th>Latence</th><th>Ports ouverts</th></tr></thead>
+      <tbody>
+        {% for h in historique %}
+        <tr>
+          <td class="td-mono" style="font-size:11px">{{ h.timestamp.strftime('%d/%m/%Y %H:%M:%S') }}</td>
+          <td>{% if h.statut == 'up' %}<span class="badge badge-green">UP</span>
+              {% else %}<span class="badge badge-red">DOWN</span>{% endif %}</td>
+          <td class="td-mono" style="color:{% if h.latence %}{% if h.latence < 50 %}var(--green){% elif h.latence < 200 %}var(--amber){% else %}var(--red){% endif %}{% else %}var(--text3){% endif %}">
+            {{ h.latence|string + ' ms' if h.latence else '—' }}
+          </td>
+          <td class="td-mono" style="font-size:11px;color:var(--text3)">{{ h.ports_ouverts if h.ports_ouverts else '—' }}</td>
+        </tr>
+        {% endfor %}
+        {% if not historique %}
+        <tr><td colspan="4" style="text-align:center;color:var(--text3);padding:32px">Aucun historique</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script>
+fetch('/reseau/api/history/{{ eq.id }}')
+  .then(r => r.json())
+  .then(pts => {
+    pts = pts.reverse();
+    new Chart(document.getElementById('chart'), {
+      type: 'line',
+      data: {
+        labels: pts.map(p => p.timestamp),
+        datasets: [{
+          data: pts.map(p => p.latence),
+          borderColor: '#00d4ff', backgroundColor: 'rgba(0,212,255,0.06)',
+          fill: true, tension: 0.4, pointRadius: 3, pointBackgroundColor: '#00d4ff', borderWidth: 2,
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color:'#475569', font:{family:'DM Mono',size:9} }, grid:{color:'rgba(255,255,255,0.04)'} },
+          y: { ticks: { color:'#475569', font:{family:'DM Mono',size:9}, callback: v => v+'ms' }, grid:{color:'rgba(255,255,255,0.04)'} }
+        }
+      }
+    });
+  }).catch(() => {});
+</script>
+{% endblock %}
+{% endblock %}

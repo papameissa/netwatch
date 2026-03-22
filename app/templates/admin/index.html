@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Administration — NetWatch{% endblock %}
+{% block page_title %}Administration{% endblock %}
+{% block content %}
+
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+  <div>
+    <div class="page-heading">Gestion des utilisateurs</div>
+    <div class="page-desc">{{ users|length }} compte(s) enregistré(s)</div>
+  </div>
+  <a href="/admin/users/creer" class="btn btn-primary">
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+    Nouvel utilisateur
+  </a>
+</div>
+
+<div class="card">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Utilisateur</th>
+          <th>Rôle</th>
+          <th>Statut</th>
+          <th>Dernière connexion</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td>
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--cyan),#0088aa);
+                display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:#070b14;flex-shrink:0">
+                {{ u.username[0].upper() }}
+              </div>
+              <div>
+                <div style="font-weight:600">{{ u.username }}</div>
+                <div style="font-size:11px;color:var(--text3)">
+                  Créé le {{ u.created_at.strftime('%d/%m/%Y') }}
+                </div>
+              </div>
+            </div>
+          </td>
+          <td>
+            {% if u.role == 'admin' %}
+              <span class="badge badge-cyan">admin</span>
+            {% else %}
+              <span class="badge badge-muted">opérateur</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if u.actif %}
+              <span class="badge badge-green">Actif</span>
+            {% else %}
+              <span class="badge badge-red">Inactif</span>
+            {% endif %}
+          </td>
+          <td class="td-mono" style="font-size:11px;color:var(--text3)">
+            {{ u.last_login.strftime('%d/%m/%Y %H:%M') if u.last_login else '—' }}
+          </td>
+          <td>
+            <div style="display:flex;gap:6px">
+              {% if u.id != current_user.id %}
+              <form method="POST" action="/admin/users/role/{{ u.id }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <button type="submit" class="btn btn-ghost btn-sm">
+                  {{ '→ opérateur' if u.role == 'admin' else '→ admin' }}
+                </button>
+              </form>
+              <form method="POST" action="/admin/users/toggle/{{ u.id }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <button type="submit" class="btn {{ 'btn-danger' if u.actif else 'btn-ghost' }} btn-sm">
+                  {{ 'Désactiver' if u.actif else 'Activer' }}
+                </button>
+              </form>
+              {% else %}
+              <span style="font-size:12px;color:var(--text3);padding:6px">Votre compte</span>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

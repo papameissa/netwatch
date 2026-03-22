@@ -1,0 +1,58 @@
+name: netwatch
+
+services:
+  web:
+    build: .
+    container_name: netwatch_web
+    ports:
+      - "5000:5000"
+    environment:
+      - DATABASE_URL=postgresql://netwatch:netwatch123@db:5432/netwatch_db
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=netwatch_secret_change_in_prod
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - netwatch_network
+    volumes:
+      - .:/app
+    restart: unless-stopped
+    privileged: true
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN
+
+  db:
+    image: postgres:15-alpine
+    container_name: netwatch_db
+    environment:
+      - POSTGRES_USER=netwatch
+      - POSTGRES_PASSWORD=netwatch123
+      - POSTGRES_DB=netwatch_db
+    volumes:
+      - netwatch_postgres_data:/var/lib/postgresql/data
+    networks:
+      - netwatch_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U netwatch -d netwatch_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: netwatch_redis
+    networks:
+      - netwatch_network
+    restart: unless-stopped
+
+networks:
+  netwatch_network:
+    driver: bridge
+
+volumes:
+  netwatch_postgres_data:

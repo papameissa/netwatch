@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}Vue d'ensemble — NetWatch{% endblock %}
+{% block page_title %}Vue d'ensemble{% endblock %}
+{% block content %}
+
+<div class="grid-4" style="margin-bottom:24px">
+  {% for val, lbl, color, icon_path in [
+    (total,   'Équipements', 'var(--cyan)',   'M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18'),
+    (up,      'En ligne',    'var(--green)',  'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'),
+    (down,    'Hors ligne',  'var(--red)',    'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z'),
+    (non_lues,'Alertes',     'var(--amber)',  'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9'),
+  ] %}
+  <div class="kpi anim" style="animation-delay:{{ loop.index0 * 0.06 }}s">
+    <div class="kpi-glow" style="background:{{ color }}"></div>
+    <div class="kpi-icon" style="background:{{ color }}1a">
+      <svg fill="none" stroke="{{ color }}" viewBox="0 0 24 24" stroke-width="1.8">
+        <path stroke-linecap="round" stroke-linejoin="round" d="{{ icon_path }}"/>
+      </svg>
+    </div>
+    <div class="kpi-val" style="color:{{ color }}">{{ val }}</div>
+    <div class="kpi-lbl">{{ lbl }}</div>
+    <div class="kpi-bar">
+      <div class="kpi-fill" style="background:{{ color }};width:{{ [val/total*100,100]|min|int if total else 100 }}%"></div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="grid-2">
+  <!-- Équipements récents -->
+  <div class="card anim" style="animation-delay:.25s">
+    <div class="card-header">
+      <div class="card-title">
+        <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        Équipements récents
+      </div>
+      <a href="/reseau" class="btn btn-ghost btn-sm">Voir tout →</a>
+    </div>
+    {% if recents %}
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Nom</th><th>IP</th><th>Statut</th><th>Latence</th></tr></thead>
+        <tbody>
+          {% for eq in recents %}
+          <tr>
+            <td style="font-weight:600">
+              <a href="/reseau/detail/{{ eq.id }}" style="color:var(--text);text-decoration:none">{{ eq.nom }}</a>
+            </td>
+            <td class="td-mono" style="color:var(--cyan)">{{ eq.ip_address }}</td>
+            <td>
+              {% if eq.dernier_statut == 'up' %}<span class="badge badge-green">UP</span>
+              {% elif eq.dernier_statut == 'down' %}<span class="badge badge-red">DOWN</span>
+              {% else %}<span class="badge badge-muted">—</span>{% endif %}
+            </td>
+            <td class="td-mono" style="font-size:12px;color:{% if eq.derniere_latence %}{% if eq.derniere_latence < 50 %}var(--green){% elif eq.derniere_latence < 200 %}var(--amber){% else %}var(--red){% endif %}{% else %}var(--text3){% endif %}">
+              {{ eq.derniere_latence|string + ' ms' if eq.derniere_latence else '—' }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty">
+      <div class="empty-desc">Aucun équipement · <a href="/reseau/ajouter" style="color:var(--cyan)">Ajouter →</a></div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Alertes récentes -->
+  <div class="card anim" style="animation-delay:.3s">
+    <div class="card-header">
+      <div class="card-title">
+        <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+        Alertes récentes
+        {% if non_lues > 0 %}<span class="badge badge-red">{{ non_lues }}</span>{% endif %}
+      </div>
+      <a href="/alertes" class="btn btn-ghost btn-sm">Voir tout →</a>
+    </div>
+    {% if alertes_recentes %}
+    <div style="display:flex;flex-direction:column">
+      {% for a in alertes_recentes %}
+      <div style="display:flex;align-items:center;gap:12px;padding:11px 16px;
+        border-bottom:1px solid rgba(30,58,95,0.3);{% if not a.lue %}background:rgba(0,212,255,0.02){% endif %}">
+        <div style="width:8px;height:8px;border-radius:50%;flex-shrink:0;
+          background:{% if a.severite=='critical' %}var(--red){% elif a.severite=='warning' %}var(--amber){% else %}var(--green){% endif %}"></div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+            {{ a.equipement.nom }}
+          </div>
+          <div style="font-size:11px;color:var(--text3)">{{ a.message[:60] }}{% if a.message|length > 60 %}…{% endif %}</div>
+        </div>
+        <div style="font-size:10px;color:var(--text3);font-family:var(--mono);flex-shrink:0">
+          {{ a.timestamp.strftime('%H:%M') }}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty">
+      <div class="empty-desc" style="color:var(--green)">✓ Aucune alerte</div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}

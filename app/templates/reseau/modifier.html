@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Modifier — {{ eq.nom }}{% endblock %}
+{% block page_title %}Équipements{% endblock %}
+{% block content %}
+<div style="max-width:580px">
+  <div style="margin-bottom:20px">
+    <a href="/reseau" class="btn btn-ghost btn-sm">← Retour</a>
+  </div>
+  <div style="margin-bottom:20px">
+    <div class="page-heading">Modifier — {{ eq.nom }}</div>
+    <div class="page-desc" style="font-family:var(--mono)">{{ eq.ip_address }}</div>
+  </div>
+  <div class="card">
+    <div class="card-body">
+      <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Nom <span>*</span></label>
+            <input class="form-control" type="text" name="nom" value="{{ eq.nom }}" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Adresse IP</label>
+            <input class="form-control" type="text" value="{{ eq.ip_address }}" disabled
+              style="opacity:0.5;cursor:not-allowed">
+            <div class="form-hint">Non modifiable</div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Type</label>
+          <select class="form-control" name="type_equipement">
+            {% for t in types %}
+            <option {% if eq.type_equipement == t %}selected{% endif %}>{{ t }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Ports</label>
+            <input class="form-control" type="text" name="ports_surveilles" value="{{ eq.ports_surveilles }}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Intervalle (s)</label>
+            <input class="form-control" type="number" name="intervalle" value="{{ eq.intervalle }}" min="10" max="300">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <input class="form-control" type="text" name="description" value="{{ eq.description or '' }}">
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Enregistrer</button>
+          <a href="/reseau" class="btn btn-ghost">Annuler</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% block title %}Alertes — NetWatch{% endblock %}
+{% block page_title %}Alertes{% endblock %}
+{% block content %}
+
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+  <div>
+    <div class="page-heading">Centre d'alertes</div>
+    <div class="page-desc">{{ stats.non_lues }} non lue(s) · {{ stats.total }} au total</div>
+  </div>
+  <div style="display:flex;gap:8px">
+    <button class="btn btn-ghost btn-sm" onclick="lireTout()">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      Tout marquer lu
+    </button>
+    <button class="btn btn-danger btn-sm" onclick="supprimerTout()">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+      Vider
+    </button>
+  </div>
+</div>
+
+<!-- KPI row -->
+<div class="grid-3" style="margin-bottom:20px">
+  <div class="kpi anim">
+    <div class="kpi-glow" style="background:var(--red)"></div>
+    <div class="kpi-icon" style="background:var(--red-dim)">
+      <svg fill="none" stroke="var(--red)" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+    </div>
+    <div class="kpi-val" style="color:var(--red)">{{ stats.critical }}</div>
+    <div class="kpi-lbl">Critiques</div>
+    <div class="kpi-bar"><div class="kpi-fill" style="background:var(--red);width:{{ [stats.critical/stats.total*100,100]|min|int if stats.total else 0 }}%"></div></div>
+  </div>
+  <div class="kpi anim" style="animation-delay:.05s">
+    <div class="kpi-glow" style="background:var(--amber)"></div>
+    <div class="kpi-icon" style="background:var(--amber-dim)">
+      <svg fill="none" stroke="var(--amber)" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+    </div>
+    <div class="kpi-val" style="color:var(--amber)">{{ stats.warning }}</div>
+    <div class="kpi-lbl">Avertissements</div>
+    <div class="kpi-bar"><div class="kpi-fill" style="background:var(--amber);width:{{ [stats.warning/stats.total*100,100]|min|int if stats.total else 0 }}%"></div></div>
+  </div>
+  <div class="kpi anim" style="animation-delay:.1s">
+    <div class="kpi-glow" style="background:var(--cyan)"></div>
+    <div class="kpi-icon" style="background:var(--cyan-dim)">
+      <svg fill="none" stroke="var(--cyan)" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+    </div>
+    <div class="kpi-val" style="color:var(--cyan)">{{ stats.non_lues }}</div>
+    <div class="kpi-lbl">Non lues</div>
+    <div class="kpi-bar"><div class="kpi-fill" style="background:var(--cyan);width:{{ [stats.non_lues/stats.total*100,100]|min|int if stats.total else 0 }}%"></div></div>
+  </div>
+</div>
+
+<!-- Table alertes -->
+<div class="card anim" style="animation-delay:.15s">
+  {% if alertes %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:130px">Heure</th>
+          <th style="width:100px">Sévérité</th>
+          <th>Équipement</th>
+          <th>Message</th>
+          <th style="width:80px">État</th>
+          <th style="width:60px"></th>
+        </tr>
+      </thead>
+      <tbody id="alertes-tbody">
+        {% for a in alertes %}
+        <tr class="sev-{{ a.severite }} {% if not a.lue %}unread{% endif %}" id="row-{{ a.id }}">
+          <td class="td-mono" style="font-size:11px;color:var(--text3)">
+            {{ a.timestamp.strftime('%d/%m %H:%M:%S') }}
+          </td>
+          <td>
+            {% if a.severite == 'critical' %}
+              <span class="badge badge-red">🔴 Critique</span>
+            {% elif a.severite == 'warning' %}
+              <span class="badge badge-amber">🟡 Alerte</span>
+            {% else %}
+              <span class="badge badge-green">🟢 Info</span>
+            {% endif %}
+          </td>
+          <td>
+            <div style="font-weight:600;font-size:13px">{{ a.equipement.nom }}</div>
+            <div style="font-family:var(--mono);font-size:11px;color:var(--text3)">{{ a.equipement.ip_address }}</div>
+          </td>
+          <td style="font-size:13px;color:var(--text2)">{{ a.message }}</td>
+          <td>
+            {% if a.lue %}
+              <span style="font-size:11px;color:var(--text3)">Lu</span>
+            {% else %}
+              <span class="badge badge-cyan">Nouveau</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if not a.lue %}
+            <button class="btn btn-ghost btn-sm" onclick="marquerLue({{ a.id }})" title="Marquer comme lu">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+            </button>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty">
+    <div class="empty-icon" style="background:var(--green-dim)">
+      <svg fill="none" stroke="var(--green)" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+    </div>
+    <div class="empty-title" style="color:var(--green)">Aucune alerte !</div>
+    <div class="empty-desc">Tous les équipements fonctionnent normalement.</div>
+  </div>
+  {% endif %}
+</div>
+
+{% block scripts %}
+<script>
+const CSRF = "{{ csrf_token() }}";
+
+async function marquerLue(id) {
+  await fetch(`/alertes/lire/${id}`, {method:'POST', headers:{'X-CSRFToken':CSRF}});
+  const row = document.getElementById(`row-${id}`);
+  if (row) {
+    row.classList.remove('unread');
+    const btn = row.querySelector('button');
+    if (btn) btn.remove();
+    const td = row.cells[4];
+    if (td) td.innerHTML = '<span style="font-size:11px;color:var(--text3)">Lu</span>';
+  }
+}
+
+async function lireTout() {
+  await fetch('/alertes/lire-toutes', {method:'POST', headers:{'X-CSRFToken':CSRF}});
+  document.querySelectorAll('.unread').forEach(r => r.classList.remove('unread'));
+  document.querySelectorAll('#alertes-tbody button').forEach(b => b.remove());
+  document.getElementById('badge-alertes').style.display = 'none';
+}
+
+async function supprimerTout() {
+  if (!confirm('Supprimer toutes les alertes ?')) return;
+  await fetch('/alertes/supprimer-toutes', {method:'POST', headers:{'X-CSRFToken':CSRF}});
+  location.reload();
+}
+
+// Ajout live via WebSocket
+const socket = io();
+socket.on('equipement_down', d => {
+  const row = document.createElement('tr');
+  row.className = 'sev-critical unread';
+  const now = new Date().toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  row.innerHTML = `
+    <td class="td-mono" style="font-size:11px;color:var(--text3)">${now}</td>
+    <td><span class="badge badge-red">🔴 Critique</span></td>
+    <td><div style="font-weight:600">${d.nom}</div><div style="font-family:var(--mono);font-size:11px;color:var(--text3)">${d.ip}</div></td>
+    <td style="font-size:13px;color:var(--text2)">${d.nom} (${d.ip}) est HORS LIGNE</td>
+    <td><span class="badge badge-cyan">Nouveau</span></td>
+    <td></td>`;
+  const tbody = document.getElementById('alertes-tbody');
+  if (tbody) tbody.prepend(row);
+});
+</script>
+{% endblock %}
+{% endblock %}

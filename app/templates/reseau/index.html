@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+{% block title %}Équipements — NetWatch{% endblock %}
+{% block page_title %}Équipements réseau{% endblock %}
+{% block content %}
+<style>
+  .eq-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+  .eq-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+    overflow:hidden;transition:transform 0.2s,border-color 0.2s;animation:fadeUp 0.3s ease both}
+  .eq-card:hover{transform:translateY(-2px)}
+  .eq-card.status-up{border-color:rgba(16,185,129,0.25)}
+  .eq-card.status-down{border-color:rgba(239,68,68,0.35);background:rgba(239,68,68,0.02)}
+  .eq-card-top{padding:16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+  .eq-info{display:flex;align-items:center;gap:12px}
+  .eq-icon{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .eq-name{font-size:15px;font-weight:700}
+  .eq-ip{font-family:var(--mono);font-size:12px;color:var(--text3)}
+  .eq-body{padding:14px 16px}
+  .eq-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+  .eq-metric{background:var(--surface2);border-radius:8px;padding:8px 10px;text-align:center}
+  .eq-metric-val{font-family:var(--mono);font-size:14px;font-weight:600}
+  .eq-metric-lbl{font-size:10px;color:var(--text3);margin-top:2px}
+  .eq-hist{display:flex;gap:2px;margin-bottom:12px}
+  .hist-bar{flex:1;height:24px;border-radius:3px;background:var(--surface2)}
+  .hist-bar.up{background:rgba(16,185,129,0.5)}
+  .hist-bar.down{background:rgba(239,68,68,0.5)}
+  .eq-ports{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px}
+  .port-tag{font-family:var(--mono);font-size:10px;padding:2px 7px;border-radius:4px}
+  .port-open{background:rgba(16,185,129,0.1);color:var(--green);border:1px solid rgba(16,185,129,0.2)}
+  .port-closed{background:var(--surface2);color:var(--text3);border:1px solid var(--border)}
+  .eq-actions{display:flex;gap:6px;align-items:center}
+  .eq-actions .btn{padding:6px 10px;font-size:12px}
+  .status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+  .dot-up{background:var(--green);box-shadow:0 0 8px rgba(16,185,129,0.6)}
+  .dot-down{background:var(--red);box-shadow:0 0 8px rgba(239,68,68,0.6);animation:pulse 1.5s infinite}
+  .dot-inconnu{background:var(--text3)}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+</style>
+
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+  <div>
+    <div class="page-heading">Équipements réseau</div>
+    <div class="page-desc">{{ equipements|length }} équipement(s) · Scan automatique · Alertes temps réel</div>
+  </div>
+  <div style="display:flex;gap:8px">
+    <button class="btn btn-ghost" id="scan-all-btn" onclick="scanAll()">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+      Scanner tout
+    </button>
+    <a href="/reseau/ajouter" class="btn btn-primary">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+      Ajouter
+    </a>
+  </div>
+</div>
+
+{% if equipements %}
+<div class="eq-grid" id="eq-grid">
+  {% for eq in equipements %}
+  <div class="eq-card status-{{ eq.dernier_statut }}" id="card-{{ eq.id }}" style="animation-delay:{{ loop.index0 * 0.04 }}s">
+    <div class="eq-card-top">
+      <div class="eq-info">
+        <div class="eq-icon" style="background:{% if eq.dernier_statut == 'up' %}var(--green-dim){% elif eq.dernier_statut == 'down' %}var(--red-dim){% else %}var(--surface2){% endif %}">
+          <svg width="20" height="20" fill="none" stroke="{% if eq.dernier_statut == 'up' %}var(--green){% elif eq.dernier_statut == 'down' %}var(--red){% else %}var(--text3){% endif %}" viewBox="0 0 24 24" stroke-width="1.8">
+            {% if eq.type_equipement == 'Routeur' or eq.type_equipement == 'Switch' %}
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"/>
+            {% elif eq.type_equipement == 'Serveur' %}
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"/>
+            {% else %}
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+            {% endif %}
+          </svg>
+        </div>
+        <div>
+          <div class="eq-name">{{ eq.nom }}</div>
+          <div class="eq-ip">{{ eq.ip_address }}</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="status-dot dot-{{ eq.dernier_statut }}"></div>
+        {% if eq.dernier_statut == 'up' %}<span class="badge badge-green">UP</span>
+        {% elif eq.dernier_statut == 'down' %}<span class="badge badge-red">DOWN</span>
+        {% else %}<span class="badge badge-muted">—</span>{% endif %}
+      </div>
+    </div>
+
+    <div class="eq-body">
+      <!-- Métriques -->
+      <div class="eq-metrics">
+        <div class="eq-metric">
+          <div class="eq-metric-val" id="lat-{{ eq.id }}" style="color:{% if eq.derniere_latence %}{% if eq.derniere_latence < 50 %}var(--green){% elif eq.derniere_latence < 200 %}var(--amber){% else %}var(--red){% endif %}{% else %}var(--text3){% endif %}">
+            {{ eq.derniere_latence|string + 'ms' if eq.derniere_latence else '—' }}
+          </div>
+          <div class="eq-metric-lbl">Latence</div>
+        </div>
+        <div class="eq-metric">
+          <div class="eq-metric-val" style="color:{% if eq.uptime_pct is not none %}{% if eq.uptime_pct >= 95 %}var(--green){% elif eq.uptime_pct >= 80 %}var(--amber){% else %}var(--red){% endif %}{% else %}var(--text3){% endif %}">
+            {{ eq.uptime_pct|string + '%' if eq.uptime_pct is not none else '—' }}
+          </div>
+          <div class="eq-metric-lbl">Uptime</div>
+        </div>
+        <div class="eq-metric">
+          <div class="eq-metric-val" style="color:var(--text2)">{{ eq.intervalle }}s</div>
+          <div class="eq-metric-lbl">Intervalle</div>
+        </div>
+      </div>
+
+      <!-- Mini historique -->
+      <div class="eq-hist" id="hist-{{ eq.id }}">
+        {% for h in eq.historique.limit(20).all()|reverse %}
+        <div class="hist-bar {{ h.statut }}" title="{{ h.statut }} — {{ h.timestamp.strftime('%H:%M:%S') }}"></div>
+        {% endfor %}
+        {% for _ in range(20 - eq.historique.count()) %}
+        <div class="hist-bar"></div>
+        {% endfor %}
+      </div>
+
+      <!-- Ports -->
+      {% if eq.ports_list %}
+      <div class="eq-ports">
+        {% set last = eq.historique.first() %}
+        {% set open_list = last.ports_ouverts.split(',') if last and last.ports_ouverts else [] %}
+        {% for port in eq.ports_list %}
+        <span class="port-tag {{ 'port-open' if port|string in open_list else 'port-closed' }}">
+          :{{ port }}
+        </span>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <!-- Actions -->
+      <div class="eq-actions">
+        <a href="/reseau/detail/{{ eq.id }}" class="btn btn-ghost">Historique</a>
+        <button class="btn btn-ghost" onclick="pingNow({{ eq.id }}, this)" title="Ping maintenant">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+        </button>
+        <a href="/reseau/modifier/{{ eq.id }}" class="btn btn-ghost">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+        </a>
+        <form method="POST" action="/reseau/supprimer/{{ eq.id }}" style="margin-left:auto"
+              onsubmit="return confirm('Supprimer {{ eq.nom }} ?')">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+          <button type="submit" class="btn btn-danger">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% else %}
+<div class="card">
+  <div class="empty">
+    <div class="empty-icon">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18"/></svg>
+    </div>
+    <div class="empty-title">Aucun équipement enregistré</div>
+    <div class="empty-desc">Ajoutez votre premier équipement à surveiller</div>
+    <a href="/reseau/ajouter" class="btn btn-primary">+ Ajouter un équipement</a>
+  </div>
+</div>
+{% endif %}
+
+{% block scripts %}
+<script>
+async function pingNow(id, btn) {
+  btn.disabled = true;
+  btn.innerHTML = '<svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><circle cx="12" cy="12" r="10" stroke-dasharray="31.4" stroke-dashoffset="31.4" style="animation:spin 1s linear infinite"/></svg>';
+  try {
+    const r = await fetch(`/reseau/ping/${id}`, {method:'POST',
+      headers:{'X-CSRFToken': '{{ csrf_token() }}','Content-Type':'application/json'}});
+    const d = await r.json();
+    updateCard(d);
+  } catch(e) {}
+  btn.disabled = false;
+  btn.innerHTML = '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>';
+}
+
+async function scanAll() {
+  const btn = document.getElementById('scan-all-btn');
+  btn.disabled = true;
+  const ids = [...document.querySelectorAll('[id^="card-"]')].map(c => c.id.replace('card-',''));
+  for (const id of ids) {
+    await fetch(`/reseau/ping/${id}`, {method:'POST',
+      headers:{'X-CSRFToken':'{{ csrf_token() }}','Content-Type':'application/json'}});
+    await new Promise(r => setTimeout(r, 300));
+  }
+  btn.disabled = false;
+}
+
+function updateCard(d) {
+  const card = document.getElementById(`card-${d.id}`);
+  if (!card) return;
+  card.className = `eq-card status-${d.statut}`;
+  const lat = document.getElementById(`lat-${d.id}`);
+  if (lat) lat.textContent = d.latence ? d.latence + 'ms' : '—';
+}
+
+// Live update via WebSocket
+const socket = io();
+socket.on('scan_update', d => updateCard(d));
+
+@keyframes spin { to { stroke-dashoffset: 0; } }
+</script>
+{% endblock %}
+{% endblock %}
