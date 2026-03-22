@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required
 from app import db, socketio
-from app.models import Equipement, PingHistory
+from app.models import Equipement
 from app.scanner import ping_host, scan_ports
 
 reseau_bp = Blueprint('reseau', __name__)

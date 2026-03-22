@@ -1,7 +1,7 @@
-from flask import Blueprint, render_template, jsonify, request
+from flask import Blueprint, render_template, jsonify
 from flask_login import login_required
 from app import db
-from app.models import Alerte, Equipement
+from app.models import Alerte
 
 alertes_bp = Blueprint('alertes', __name__)
 
