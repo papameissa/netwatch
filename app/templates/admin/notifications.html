@@ -180,7 +180,7 @@ async function tester(canal, btn) {
   btn.textContent = '...';
   const res  = document.getElementById(`result-${canal}`);
   try {
-    const r = await fetch(`/admin/notifications/test/${canal}`, {
+    const r = await fetch(`/admin/notifs/test/${canal}`, {
       method: 'POST', headers: {'X-CSRFToken': CSRF}
     });
     const d = await r.json();
