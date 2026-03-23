@@ -1,7 +1,7 @@
 import threading, socket, time
 from datetime import datetime
 
-LATENCE_SEUIL = 200  # ms — au-dessus = alerte latence élevée
+LATENCE_SEUIL = 200  # ms
 
 
 def ping_host(ip, timeout=2):
@@ -52,72 +52,59 @@ def scan_ports(ip, ports, timeout=0.8):
 
 
 def _creer_alerte(db, eq, type_alerte, severite, message):
-    """Crée une alerte en base."""
     from app.models import Alerte
-    alerte = Alerte(
-        equipement_id=eq.id,
-        type_alerte=type_alerte,
-        severite=severite,
-        message=message,
-    )
-    db.session.add(alerte)
-    return alerte
+    a = Alerte(equipement_id=eq.id, type_alerte=type_alerte,
+               severite=severite, message=message)
+    db.session.add(a)
+    return a
 
 
 def _check(app, eq_id, socketio):
     from app.models import Equipement, PingHistory
+    from app.notifications import notifier
     from app import db
+
     with app.app_context():
         eq = Equipement.query.get(eq_id)
         if not eq or not eq.actif:
             return
 
-        ancien_statut  = eq.dernier_statut
+        ancien       = eq.dernier_statut
         is_up, latence = ping_host(eq.ip_address)
         ports_ouverts  = scan_ports(eq.ip_address, eq.ports_list) if is_up and eq.ports_list else []
-        nouveau_statut = 'up' if is_up else 'down'
+        nouveau        = 'up' if is_up else 'down'
 
-        # Historique
         db.session.add(PingHistory(
-            equipement_id=eq.id, statut=nouveau_statut, latence=latence,
+            equipement_id=eq.id, statut=nouveau, latence=latence,
             ports_ouverts=','.join(map(str, ports_ouverts)),
         ))
-
-        eq.dernier_statut   = nouveau_statut
+        eq.dernier_statut   = nouveau
         eq.derniere_verif   = datetime.utcnow()
         eq.derniere_latence = latence
 
-        # ── Alertes ──────────────────────────────────────────
-        alerte_data = None
+        # ── Alertes + Notifications ───────────────────────
+        if ancien != 'down' and nouveau == 'down':
+            msg = f'{eq.nom} ({eq.ip_address}) est HORS LIGNE'
+            _creer_alerte(db, eq, 'down', 'critical', msg)
+            socketio.emit('equipement_down', {'id': eq.id, 'nom': eq.nom, 'ip': eq.ip_address})
+            notifier('down', eq.nom, eq.ip_address, msg)
 
-        if ancien_statut != 'down' and nouveau_statut == 'down':
-            # Panne détectée
-            _creer_alerte(db, eq, 'down', 'critical',
-                          f'{eq.nom} ({eq.ip_address}) est HORS LIGNE')
-            alerte_data = {'type': 'down', 'severite': 'critical',
-                           'nom': eq.nom, 'ip': eq.ip_address, 'id': eq.id}
-            socketio.emit('equipement_down', alerte_data)
+        elif ancien == 'down' and nouveau == 'up':
+            msg = f'{eq.nom} ({eq.ip_address}) est de nouveau EN LIGNE — {latence}ms'
+            _creer_alerte(db, eq, 'up', 'info', msg)
+            socketio.emit('equipement_up', {'id': eq.id, 'nom': eq.nom,
+                                            'ip': eq.ip_address, 'latence': latence})
+            notifier('up', eq.nom, eq.ip_address, msg, latence)
 
-        elif ancien_statut == 'down' and nouveau_statut == 'up':
-            # Rétablissement
-            _creer_alerte(db, eq, 'up', 'info',
-                          f'{eq.nom} ({eq.ip_address}) est de nouveau EN LIGNE — {latence}ms')
-            alerte_data = {'type': 'up', 'severite': 'info',
-                           'nom': eq.nom, 'ip': eq.ip_address, 'id': eq.id, 'latence': latence}
-            socketio.emit('equipement_up', alerte_data)
-
-        elif nouveau_statut == 'up' and latence and latence > LATENCE_SEUIL:
-            # Latence élevée
-            _creer_alerte(db, eq, 'latence', 'warning',
-                          f'{eq.nom} ({eq.ip_address}) — latence élevée : {latence}ms')
+        elif nouveau == 'up' and latence and latence > LATENCE_SEUIL:
+            msg = f'{eq.nom} ({eq.ip_address}) — latence élevée : {latence}ms'
+            _creer_alerte(db, eq, 'latence', 'warning', msg)
+            notifier('latence', eq.nom, eq.ip_address, msg, latence)
 
         db.session.commit()
 
-        # Mettre à jour le compteur d'alertes non lues
-        total_non_lues = sum(
-            e.alertes_non_lues for e in Equipement.query.all()
-        )
-        socketio.emit('scan_update', {**eq.to_dict(), 'alertes_non_lues': total_non_lues})
+        total_nl = sum(e.alertes_non_lues for e in Equipement.query.all())
+        socketio.emit('scan_update', {**eq.to_dict(), 'alertes_non_lues': total_nl})
 
 
 class NetworkScanner:

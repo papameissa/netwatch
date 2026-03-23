@@ -10,3 +10,4 @@ python-dotenv==1.0.0
 eventlet==0.33.3
 Werkzeug==3.0.1
 ping3==4.0.4
+twilio==8.10.0
